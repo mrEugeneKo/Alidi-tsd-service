@@ -1,5 +1,10 @@
 import os
-basedir = os.path.abspath(os.path.dirname(__file__))
+from dotenv import load_dotenv
+
+dotenv_path = os.path.join(os.path.dirname(__file__), 'alidi-tsd-service.env')
+
+if os.path.exists(dotenv_path):
+    load_dotenv(dotenv_path)
 
 class Config(object):
     DEBUG = False
