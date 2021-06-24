@@ -41,6 +41,7 @@ class HistoryRecord(db.Model):
             'time': self.time
         }
 
+
 class DeviceName(db.Model):
     __tablename__ = 'device'
 
