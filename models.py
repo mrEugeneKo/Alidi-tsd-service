@@ -1,6 +1,7 @@
 from datetime import datetime as dt
 from main import db
 
+my change
 
 class HistoryRecord(db.Model):
     __tablename__ = 'history'
