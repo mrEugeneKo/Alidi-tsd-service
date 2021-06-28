@@ -19,7 +19,8 @@ def turnon():
     device_name = request.args.get('device_name', default='x', type=str)
     ver = request.args.get('ver', default='x', type=str)
     SaveHistory(1, ip, serno, mac, device_name, ver)
-    return {'UTC':  dt.now(), 'next_update_min': 120}
+    return {'UTC': dt.now(), 'next_update_min': 120}
+
 
 @app.route("/update")
 def update():
@@ -30,27 +31,36 @@ def update():
     device_name = request.args.get('device_name', default='x', type=str)
     ver = request.args.get('ver', default='x', type=str)
     SaveHistory(2, ip, serno, mac, device_name, ver)
-    return {'UTC':  dt.now(), 'next_update_min': 180}
+    return {'UTC': dt.now(), 'next_update_min': 180}
+
 
 def SaveHistory(operation_code, ip, serno, mac, device_name, ver):
     history_rec = models.HistoryRecord(
         operation_code
         , ip
-        , mac
-        , serno
         , 0
         , ver
     )
-    if device_name != 'x':
-        device = db.session.query(models.DeviceName).filter_by(description=device_name).first()
-        if device:
-            history_rec.device_code = device.code
+    device = db.session.query(models.Device).filter_by(mac=mac).first()
+    if device:
+        history_rec.device_code = device.code
+    else:
+        devicetype = db.session.query(models.DeviceType).filter_by(description=device_name).first()
+        newdevice = models.Device(
+            mac,
+            serno,
+            0
+        )
+        if devicetype:
+            newdevice.devicetype_code = devicetype.code
         else:
-            device = models.DeviceName(device_name)
-            db.session.add(device)
+            newdevicetype = models.DeviceType(device_name)
+            db.session.add(newdevicetype)
             db.session.commit()
-            history_rec.device_code = device.code
-
+            newdevice.devicetype_code = newdevicetype.code
+        db.session.add(newdevice)
+        db.session.commit()
+        history_rec.device_code = newdevice.code
     db.session.add(history_rec)
     db.session.commit()
     return
