@@ -19,7 +19,7 @@ def turnon():
     device_name = request.args.get('device_name', default='x', type=str)
     ver = request.args.get('ver', default='x', type=str)
     SaveHistory(1, ip, serno, mac, device_name, ver)
-    return {'UTC': dt.now(), 'next_update_min': 17 }
+    return {'UTC': dt.now(), 'next_update_min': 17}
 
 
 @app.route("/update")
