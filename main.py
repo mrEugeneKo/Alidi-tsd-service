@@ -19,7 +19,7 @@ def turnon():
     device_name = request.args.get('device_name', default='x', type=str)
     ver = request.args.get('ver', default='x', type=str)
     SaveHistory(1, ip, serno, mac, device_name, ver)
-    return {'UTC': dt.now(), 'next_update_min': 120}
+    return {'UTC': dt.now(), 'next_update_min': 5}
 
 
 @app.route("/update")
@@ -31,7 +31,7 @@ def update():
     device_name = request.args.get('device_name', default='x', type=str)
     ver = request.args.get('ver', default='x', type=str)
     SaveHistory(2, ip, serno, mac, device_name, ver)
-    return {'UTC': dt.now(), 'next_update_min': 180}
+    return {'UTC': dt.now(), 'next_update_min': 10}
 
 
 def SaveHistory(operation_code, ip, serno, mac, device_name, ver):
