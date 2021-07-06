@@ -18,15 +18,19 @@ class BaseDB(db.Model):
 class Device(BaseDB):
     __tablename__ = 'device'
 
-    mac = db.Column(db.String(50))
-    serial_number = db.Column(db.String(50))
+    mac = db.Column(db.String(20))
+    serial_number = db.Column(db.String(20))
     devicetype_code = db.Column(db.Integer)
+    invent_id = db.Column(db.String(5))
+    devicemode_code = db.Column(db.Integer)
 
-    def __init__(self, mac, serial_number, devicetype_code):
+    def __init__(self, mac, serial_number, devicetype_code, devicemode_code):
         super().__init__()
         self.mac = mac
         self.serial_number = serial_number
         self.devicetype_code = devicetype_code
+        self.invent_id = ''
+        self.devicemode_code = devicemode_code
 
 
 class HistoryRecord(BaseDB):
@@ -55,3 +59,11 @@ class DeviceType(BaseDB):
         super().__init__()
         self.description = description
 
+class DeviceMode(BaseDB):
+    __tablename__ = 'devicemode'
+
+    description = db.Column(db.String(20))
+
+    def __init__(self, description):
+        super().__init__()
+        self.description = description

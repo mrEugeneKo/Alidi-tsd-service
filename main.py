@@ -49,7 +49,8 @@ def SaveHistory(operation_code, ip, serno, mac, device_name, ver):
         newdevice = models.Device(
             mac,
             serno,
-            0
+            0,
+            1
         )
         if devicetype:
             newdevice.devicetype_code = devicetype.code
