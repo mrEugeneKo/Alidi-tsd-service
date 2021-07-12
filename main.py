@@ -35,38 +35,43 @@ def update():
 
 
 def SaveHistory(operation_code, ip, serno, mac, device_name, ver):
-    history_rec = models.HistoryRecord(
-        operation_code
-        , ip
-        , 0
-        , ver
-    )
-    device = db.session.query(models.Device).filter_by(mac=mac).first()
-    if device:
-        history_rec.device_code = device.code
-    else:
-        devicetype = db.session.query(models.DeviceType).filter_by(description=device_name).first()
-        newdevice = models.Device(
-            mac,
-            serno,
-            0,
-            1
+    if ver != 'x':
+        history_rec = models.HistoryRecord(
+            operation_code
+            , ip
+            , 0
+            , ver
         )
-        if devicetype:
-            newdevice.devicetype_code = devicetype.code
+        device = db.session.query(models.Device).filter_by(mac=mac).first()
+        if device:
+            history_rec.device_code = device.code
         else:
-            newdevicetype = models.DeviceType(device_name)
-            db.session.add(newdevicetype)
+            devicetype = db.session.query(models.DeviceType).filter_by(description=device_name).first()
+            newdevice = models.Device(
+                mac,
+                serno,
+                0,
+                1
+            )
+            if devicetype:
+                newdevice.devicetype_code = devicetype.code
+            else:
+                newdevicetype = models.DeviceType(device_name)
+                db.session.add(newdevicetype)
+                db.session.commit()
+                newdevice.devicetype_code = newdevicetype.code
+            db.session.add(newdevice)
             db.session.commit()
-            newdevice.devicetype_code = newdevicetype.code
-        db.session.add(newdevice)
+            history_rec.device_code = newdevice.code
+        db.session.add(history_rec)
         db.session.commit()
-        history_rec.device_code = newdevice.code
-    db.session.add(history_rec)
-    db.session.commit()
     return
 
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=8080)
+    if app.config.get('DEBUG'):
+        app.run(host='0.0.0.0', port=8080)
+    else:
+        from waitress import serve
+        serve(app, host='0.0.0.0', port=8080)
