@@ -1,4 +1,5 @@
 import os
+from threading import Thread
 import models
 from flask import Flask, request
 from flask_sqlalchemy import SQLAlchemy
@@ -12,25 +13,27 @@ db = SQLAlchemy(app)
 
 @app.route("/turnon")
 def turnon():
-    # Use a breakpoint in the code line below to debug your script.
     ip = request.args.get('ip', default='x', type=str)
     serno = request.args.get('serno', default='x', type=str)
     mac = request.args.get('mac', default='x', type=str)
     device_name = request.args.get('device_name', default='x', type=str)
     ver = request.args.get('ver', default='x', type=str)
-    SaveHistory(1, ip, serno, mac, device_name, ver)
+    # вставку запускаем в отдельном потоке, чтобы не задерживать ответ
+    thread = Thread(target=SaveHistory, args=(1, ip, serno, mac, device_name, ver))
+    thread.start()
     return {'UTC': dt.now(), 'next_update_min': 60}
 
 
 @app.route("/update")
 def update():
-    # Use a breakpoint in the code line below to debug your script.
     ip = request.args.get('ip', default='x', type=str)
     serno = request.args.get('serno', default='x', type=str)
     mac = request.args.get('mac', default='x', type=str)
     device_name = request.args.get('device_name', default='x', type=str)
     ver = request.args.get('ver', default='x', type=str)
-    SaveHistory(2, ip, serno, mac, device_name, ver)
+    # вставку запускаем в отдельном потоке, чтобы не задерживать ответ
+    thread = Thread(target=SaveHistory, args=(2, ip, serno, mac, device_name, ver))
+    thread.start()
     return {'UTC': dt.now(), 'next_update_min': 180}
 
 
