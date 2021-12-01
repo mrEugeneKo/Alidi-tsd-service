@@ -1,0 +1,196 @@
+-- Adminer 4.8.1 PostgreSQL 13.3 (Debian 13.3-1.pgdg100+1) dump
+
+CREATE SEQUENCE device_name_id_seq INCREMENT 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1;
+
+CREATE TABLE "public"."device" (
+    "code" integer DEFAULT nextval('device_name_id_seq') NOT NULL,
+    "mac" character(20) NOT NULL,
+    "serial_number" character(20),
+    "devicetype_code" integer,
+    "created_date" date,
+    "created_time" time without time zone,
+    "invent_id" character(10),
+    "devicemode_code" integer,
+    "description" character(50),
+    CONSTRAINT "device_name_pkey" PRIMARY KEY ("code")
+) WITH (oids = false);
+
+
+CREATE TABLE "devicebynet" ("last_net" text, "tsd_online" bigint, "tsd_used_last_day" bigint, "tsd_used_last_week" bigint, "tsd_not_used_last_week" bigint, "tsd_count" bigint);
+
+
+CREATE SEQUENCE devicemode_code_seq INCREMENT 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1;
+
+CREATE TABLE "public"."devicemode" (
+    "code" integer DEFAULT nextval('devicemode_code_seq') NOT NULL,
+    "description" character(20) NOT NULL,
+    "created_date" date,
+    "created_time" time without time zone,
+    CONSTRAINT "devicemode_pkey" PRIMARY KEY ("code")
+) WITH (oids = false);
+
+INSERT INTO "devicemode" ("code", "description", "created_date", "created_time") VALUES
+(1,	'Работает            ',	'2021-07-06',	'08:54:00'),
+(2,	'Сломан              ',	'2021-09-08',	'13:23:33.396293'),
+(99,	'Тестовый            ',	'2021-09-13',	'06:58:09.7949'),
+(3,	'В резерве           ',	'2021-09-17',	'12:08:24.940227');
+
+CREATE TABLE "devicesneedupdate" ("invent_id" character(10), "code" integer, "description" character(50), "serial_number" character(20), "last_ip" character(16), "last_ver" character(5), "needupdate" text, "last_update_msk" timestamp, "time_from_last_update" interval, "tocheck" text);
+
+
+CREATE TABLE "devicestatus" ("invent_id" character(10), "code" integer, "description" character(50), "serial_number" character(20), "last_ip" character(16), "last_ver" character(5), "needupdate" text, "last_update_msk" timestamp, "time_from_last_update" interval, "tocheck" text);
+
+
+CREATE TABLE "devicestocheck" ("invent_id" character(10), "code" integer, "description" character(50), "serial_number" character(20), "last_ip" character(16), "last_ver" character(5), "needupdate" text, "last_update_msk" timestamp, "time_from_last_update" interval, "tocheck" text);
+
+
+CREATE SEQUENCE devicetype_code_seq INCREMENT 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1;
+
+CREATE TABLE "public"."devicetype" (
+    "code" integer DEFAULT nextval('devicetype_code_seq') NOT NULL,
+    "description" character(50),
+    "created_time" time without time zone,
+    "created_date" date,
+    CONSTRAINT "devicetype_pk" PRIMARY KEY ("code")
+) WITH (oids = false);
+
+COMMENT ON TABLE "public"."devicetype" IS 'типы ТСД';
+
+INSERT INTO "devicetype" ("code", "description", "created_time", "created_date") VALUES
+(1,	'Honeywell EDA50K                                  ',	'06:36:08.273457',	'2021-06-30'),
+(2,	'samsung SM-T295                                   ',	'07:47:46.836951',	'2021-07-07');
+
+CREATE SEQUENCE history_id_seq INCREMENT 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1;
+
+CREATE TABLE "public"."history" (
+    "code" integer DEFAULT nextval('history_id_seq') NOT NULL,
+    "operation_code" integer NOT NULL,
+    "ip" character(16) NOT NULL,
+    "device_code" integer NOT NULL,
+    "version" character(5) NOT NULL,
+    "created_time" time without time zone NOT NULL,
+    "created_date" date NOT NULL,
+    CONSTRAINT "history_pkey" PRIMARY KEY ("code")
+) WITH (oids = false);
+
+CREATE INDEX "history_device_code_created_date_created_time" ON "public"."history" USING btree ("device_code", "created_date", "created_time");
+
+CREATE INDEX "history_version" ON "public"."history" USING btree ("version");
+
+
+CREATE SEQUENCE operation_code_seq INCREMENT 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1;
+
+CREATE TABLE "public"."operation" (
+    "code" integer DEFAULT nextval('operation_code_seq') NOT NULL,
+    "description" character(50) NOT NULL,
+    "created_date" date,
+    "created_time" time without time zone,
+    CONSTRAINT "operation_pkey" PRIMARY KEY ("code")
+) WITH (oids = false);
+
+INSERT INTO "operation" ("code", "description", "created_date", "created_time") VALUES
+(1,	'Включение питания                                 ',	'2021-06-30',	'08:27:00'),
+(2,	'Обновление статуса                                ',	'2021-06-30',	'08:27:00');
+
+DROP TABLE IF EXISTS "devicebynet";
+CREATE VIEW "devicebynet" AS SELECT hist.last_net,
+    count(
+        CASE
+            WHEN ((now() - (lc.lastupdate)::timestamp with time zone) < '03:00:00'::interval) THEN 1
+            ELSE NULL::integer
+        END) AS tsd_online,
+    count(
+        CASE
+            WHEN ((now() - (lc.lastupdate)::timestamp with time zone) < '24:00:00'::interval) THEN 1
+            ELSE NULL::integer
+        END) AS tsd_used_last_day,
+    count(
+        CASE
+            WHEN ((now() - (lc.lastupdate)::timestamp with time zone) < '7 days'::interval) THEN 1
+            ELSE NULL::integer
+        END) AS tsd_used_last_week,
+    count(
+        CASE
+            WHEN ((now() - (lc.lastupdate)::timestamp with time zone) > '7 days'::interval) THEN 1
+            ELSE NULL::integer
+        END) AS tsd_not_used_last_week,
+    count(*) AS tsd_count
+   FROM (((device d
+     JOIN LATERAL ( SELECT h.device_code,
+            max((h.created_date + h.created_time)) AS lastupdate
+           FROM history h
+          WHERE (d.code = h.device_code)
+          GROUP BY h.device_code) lc ON (true))
+     JOIN LATERAL ( SELECT h.device_code,
+            split_part((h.ip)::text, '.'::text, 3) AS last_net
+           FROM history h
+          WHERE ((d.code = h.device_code) AND ((h.created_date + h.created_time) = lc.lastupdate))) hist ON (true))
+     JOIN devicetype dt ON ((d.devicetype_code = dt.code)))
+  WHERE (d.devicemode_code = 1)
+  GROUP BY hist.last_net
+  ORDER BY hist.last_net;
+
+DROP TABLE IF EXISTS "devicesneedupdate";
+CREATE VIEW "devicesneedupdate" AS SELECT d.invent_id,
+    d.code,
+    d.description,
+    d.serial_number,
+    d.last_ip,
+    d.last_ver,
+    d.needupdate,
+    d.last_update_msk,
+    d.time_from_last_update,
+    d.tocheck
+   FROM devicestatus d
+  WHERE (d.needupdate <> ''::text);
+
+DROP TABLE IF EXISTS "devicestatus";
+CREATE VIEW "devicestatus" AS SELECT d.invent_id,
+    d.code,
+    dt.description,
+    d.serial_number,
+    hist.last_ip,
+    hist.last_ver,
+        CASE
+            WHEN (hist.last_ver <> maxvers.maxversion) THEN 'Надо обновить версию ПО'::text
+            ELSE ''::text
+        END AS needupdate,
+    hist.last_dt AS last_update_msk,
+    date_trunc('second'::text, ((now() + '03:00:00'::interval) - (hist.last_dt)::timestamp with time zone)) AS time_from_last_update,
+        CASE
+            WHEN (date_part('day'::text, ((now() + '03:00:00'::interval) - (hist.last_dt)::timestamp with time zone)) > (6)::double precision) THEN 'Пора искать. Долго не включали'::text
+            ELSE ''::text
+        END AS tocheck
+   FROM ((((device d
+     JOIN LATERAL ( SELECT h.device_code,
+            max((h.created_date + h.created_time)) AS lastupdate
+           FROM history h
+          WHERE (d.code = h.device_code)
+          GROUP BY h.device_code) lc ON (true))
+     JOIN LATERAL ( SELECT h.device_code,
+            h.version AS last_ver,
+            h.ip AS last_ip,
+            date_trunc('second'::text, ((h.created_date + h.created_time) + '03:00:00'::interval)) AS last_dt
+           FROM history h
+          WHERE ((d.code = h.device_code) AND ((h.created_date + h.created_time) = lc.lastupdate))) hist ON (true))
+     JOIN ( SELECT max(history.version) AS maxversion
+           FROM history) maxvers ON (true))
+     JOIN devicetype dt ON ((d.devicetype_code = dt.code)))
+  WHERE (d.devicemode_code = 1)
+  ORDER BY d.invent_id, d.code;
+
+DROP TABLE IF EXISTS "devicestocheck";
+CREATE VIEW "devicestocheck" AS SELECT d.invent_id,
+    d.code,
+    d.description,
+    d.serial_number,
+    d.last_ip,
+    d.last_ver,
+    d.needupdate,
+    d.last_update_msk,
+    d.time_from_last_update,
+    d.tocheck
+   FROM devicestatus d
+  WHERE (d.tocheck <> ''::text);
+
+-- 2021-12-01 06:08:34.712717+00
