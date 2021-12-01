@@ -21,7 +21,7 @@ class Device(BaseDB):
     mac = db.Column(db.String(20))
     serial_number = db.Column(db.String(20))
     devicetype_code = db.Column(db.Integer)
-    invent_id = db.Column(db.String(5))
+    invent_id = db.Column(db.String(10))
     devicemode_code = db.Column(db.Integer)
 
     def __init__(self, mac, serial_number, devicetype_code, devicemode_code):
