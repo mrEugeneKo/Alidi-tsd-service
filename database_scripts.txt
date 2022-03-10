@@ -1,5 +1,7 @@
 -- Adminer 4.8.1 PostgreSQL 13.3 (Debian 13.3-1.pgdg100+1) dump
 
+DROP TABLE IF EXISTS "device";
+DROP SEQUENCE IF EXISTS device_name_id_seq;
 CREATE SEQUENCE device_name_id_seq INCREMENT 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1;
 
 CREATE TABLE "public"."device" (
@@ -16,9 +18,12 @@ CREATE TABLE "public"."device" (
 ) WITH (oids = false);
 
 
+DROP VIEW IF EXISTS "devicebynet";
 CREATE TABLE "devicebynet" ("last_net" text, "tsd_online" bigint, "tsd_used_last_day" bigint, "tsd_used_last_week" bigint, "tsd_not_used_last_week" bigint, "tsd_count" bigint);
 
 
+DROP TABLE IF EXISTS "devicemode";
+DROP SEQUENCE IF EXISTS devicemode_code_seq;
 CREATE SEQUENCE devicemode_code_seq INCREMENT 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1;
 
 CREATE TABLE "public"."devicemode" (
@@ -35,15 +40,20 @@ INSERT INTO "devicemode" ("code", "description", "created_date", "created_time")
 (99,	'Тестовый            ',	'2021-09-13',	'06:58:09.7949'),
 (3,	'В резерве           ',	'2021-09-17',	'12:08:24.940227');
 
+DROP VIEW IF EXISTS "devicesneedupdate";
 CREATE TABLE "devicesneedupdate" ("invent_id" character(10), "code" integer, "description" character(50), "serial_number" character(20), "last_ip" character(16), "last_ver" character(5), "needupdate" text, "last_update_msk" timestamp, "time_from_last_update" interval, "tocheck" text);
 
 
+DROP VIEW IF EXISTS "devicestatus";
 CREATE TABLE "devicestatus" ("invent_id" character(10), "code" integer, "description" character(50), "serial_number" character(20), "last_ip" character(16), "last_ver" character(5), "needupdate" text, "last_update_msk" timestamp, "time_from_last_update" interval, "tocheck" text);
 
 
+DROP VIEW IF EXISTS "devicestocheck";
 CREATE TABLE "devicestocheck" ("invent_id" character(10), "code" integer, "description" character(50), "serial_number" character(20), "last_ip" character(16), "last_ver" character(5), "needupdate" text, "last_update_msk" timestamp, "time_from_last_update" interval, "tocheck" text);
 
 
+DROP TABLE IF EXISTS "devicetype";
+DROP SEQUENCE IF EXISTS devicetype_code_seq;
 CREATE SEQUENCE devicetype_code_seq INCREMENT 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1;
 
 CREATE TABLE "public"."devicetype" (
@@ -60,6 +70,8 @@ INSERT INTO "devicetype" ("code", "description", "created_time", "created_date")
 (1,	'Honeywell EDA50K                                  ',	'06:36:08.273457',	'2021-06-30'),
 (2,	'samsung SM-T295                                   ',	'07:47:46.836951',	'2021-07-07');
 
+DROP TABLE IF EXISTS "history";
+DROP SEQUENCE IF EXISTS history_id_seq;
 CREATE SEQUENCE history_id_seq INCREMENT 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1;
 
 CREATE TABLE "public"."history" (
@@ -70,6 +82,8 @@ CREATE TABLE "public"."history" (
     "version" character(5) NOT NULL,
     "created_time" time without time zone NOT NULL,
     "created_date" date NOT NULL,
+    "user_name" character(25),
+    "server_name" character(10),
     CONSTRAINT "history_pkey" PRIMARY KEY ("code")
 ) WITH (oids = false);
 
@@ -78,6 +92,16 @@ CREATE INDEX "history_device_code_created_date_created_time" ON "public"."histor
 CREATE INDEX "history_version" ON "public"."history" USING btree ("version");
 
 
+DROP VIEW IF EXISTS "history_last";
+CREATE TABLE "history_last" ("code" integer, "operation_code" integer, "ip" character(16), "device_code" integer, "version" character(5), "created_time" time without time zone, "created_date" date);
+
+
+DROP VIEW IF EXISTS "history_old";
+CREATE TABLE "history_old" ("code" integer, "operation_code" integer, "ip" character(16), "device_code" integer, "version" character(5), "created_time" time without time zone, "created_date" date);
+
+
+DROP TABLE IF EXISTS "operation";
+DROP SEQUENCE IF EXISTS operation_code_seq;
 CREATE SEQUENCE operation_code_seq INCREMENT 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1;
 
 CREATE TABLE "public"."operation" (
@@ -90,7 +114,8 @@ CREATE TABLE "public"."operation" (
 
 INSERT INTO "operation" ("code", "description", "created_date", "created_time") VALUES
 (1,	'Включение питания                                 ',	'2021-06-30',	'08:27:00'),
-(2,	'Обновление статуса                                ',	'2021-06-30',	'08:27:00');
+(2,	'Обновление статуса                                ',	'2021-06-30',	'08:27:00'),
+(3,	'Авторизация в WMS                                 ',	'2022-03-10',	'06:47:23.752056');
 
 DROP TABLE IF EXISTS "devicebynet";
 CREATE VIEW "devicebynet" AS SELECT hist.last_net,
@@ -145,7 +170,18 @@ CREATE VIEW "devicesneedupdate" AS SELECT d.invent_id,
   WHERE (d.needupdate <> ''::text);
 
 DROP TABLE IF EXISTS "devicestatus";
-CREATE VIEW "devicestatus" AS SELECT d.invent_id,
+CREATE VIEW "devicestatus" AS WITH cte AS (
+         SELECT h.device_code,
+            h.created_date,
+            h.created_time,
+            date_trunc('second'::text, ((h.created_date + h.created_time) + '03:00:00'::interval)) AS last_dt,
+            h.version AS last_ver,
+            h.ip AS last_ip,
+            row_number() OVER (PARTITION BY h.device_code ORDER BY h.created_date DESC, h.created_time DESC) AS rn
+           FROM history h
+          WHERE (h.operation_code = ANY (ARRAY[1, 2]))
+        )
+ SELECT d.invent_id,
     d.code,
     dt.description,
     d.serial_number,
@@ -161,20 +197,11 @@ CREATE VIEW "devicestatus" AS SELECT d.invent_id,
             WHEN (date_part('day'::text, ((now() + '03:00:00'::interval) - (hist.last_dt)::timestamp with time zone)) > (6)::double precision) THEN 'Пора искать. Долго не включали'::text
             ELSE ''::text
         END AS tocheck
-   FROM ((((device d
-     JOIN LATERAL ( SELECT h.device_code,
-            max((h.created_date + h.created_time)) AS lastupdate
-           FROM history h
-          WHERE (d.code = h.device_code)
-          GROUP BY h.device_code) lc ON (true))
-     JOIN LATERAL ( SELECT h.device_code,
-            h.version AS last_ver,
-            h.ip AS last_ip,
-            date_trunc('second'::text, ((h.created_date + h.created_time) + '03:00:00'::interval)) AS last_dt
-           FROM history h
-          WHERE ((d.code = h.device_code) AND ((h.created_date + h.created_time) = lc.lastupdate))) hist ON (true))
+   FROM (((device d
+     JOIN cte hist ON (((hist.device_code = d.code) AND (hist.rn = 1))))
      JOIN ( SELECT max(history.version) AS maxversion
-           FROM history) maxvers ON (true))
+           FROM history
+          WHERE (history.operation_code = ANY (ARRAY[1, 2]))) maxvers ON (true))
      JOIN devicetype dt ON ((d.devicetype_code = dt.code)))
   WHERE (d.devicemode_code = 1)
   ORDER BY d.invent_id, d.code;
@@ -193,4 +220,32 @@ CREATE VIEW "devicestocheck" AS SELECT d.invent_id,
    FROM devicestatus d
   WHERE (d.tocheck <> ''::text);
 
--- 2021-12-01 06:08:34.712717+00
+DROP TABLE IF EXISTS "history_last";
+CREATE VIEW "history_last" AS SELECT h.code,
+    h.operation_code,
+    h.ip,
+    h.device_code,
+    h.version,
+    h.created_time,
+    h.created_date
+   FROM history h
+  WHERE ((h.created_date < '2022-02-01'::date) AND (h.code IN ( SELECT latest.code
+           FROM ( SELECT c.code,
+                    row_number() OVER (PARTITION BY c.device_code ORDER BY c.created_date DESC, c.created_time DESC) AS rn
+                   FROM history c) latest
+          WHERE (latest.rn > 1))));
+
+DROP TABLE IF EXISTS "history_old";
+CREATE VIEW "history_old" AS SELECT h.code,
+    h.operation_code,
+    h.ip,
+    h.device_code,
+    h.version,
+    h.created_time,
+    h.created_date
+   FROM history h
+  WHERE ((h.created_date < '2022-02-01'::date) AND (h.device_code IN ( SELECT DISTINCT c.device_code
+           FROM history c
+          WHERE (c.created_date >= '2022-02-01'::date))));
+
+-- 2022-03-10 08:16:21.368108+00
