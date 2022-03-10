@@ -37,6 +37,18 @@ def update():
     return {'UTC': dt.now(), 'next_update_min': 180}
 
 
+@app.route("/login")
+def login():
+    username = request.args.get('username', default='x', type=str)
+    ip = request.remote_addr
+    server_name = request.args.get('server_name', default='x', type=str)
+    ver = request.args.get('ver', default='x', type=str)
+    # вставку запускаем в отдельном потоке, чтобы не задерживать ответ
+    thread = Thread(target=SaveLogin, args=(3, ip, username, server_name, ver))
+    thread.start()
+    return {'UTC': dt.now(), 'next_update_min': 180}
+
+
 def SaveHistory(operation_code, ip, serno, mac, device_name, ver):
     if ver != 'x':
         history_rec = models.HistoryRecord(
@@ -44,6 +56,8 @@ def SaveHistory(operation_code, ip, serno, mac, device_name, ver):
             , ip
             , 0
             , ver
+            , ''
+            , ''
         )
         device = db.session.query(models.Device).filter_by(mac=mac).first()
         if device:
@@ -66,6 +80,27 @@ def SaveHistory(operation_code, ip, serno, mac, device_name, ver):
             db.session.add(newdevice)
             db.session.commit()
             history_rec.device_code = newdevice.code
+        db.session.add(history_rec)
+        db.session.commit()
+    return
+
+
+def SaveLogin(operation_code, ip, username, server_name, ver):
+    if ver != 'x':
+        history_rec = models.HistoryRecord(
+            operation_code
+            , ip
+            , 0
+            , ver
+            , username
+            , server_name
+        )
+        lasthistory = db.session.query(models.HistoryRecord)\
+            .filter_by(ip=ip) \
+            .order_by(models.HistoryRecord.created_date.desc()) \
+            .first()
+        if lasthistory:
+            history_rec.device_code = lasthistory.device_code
         db.session.add(history_rec)
         db.session.commit()
     return

@@ -40,14 +40,17 @@ class HistoryRecord(BaseDB):
     device_code = db.Column(db.Integer)
     ip = db.Column(db.String(16))
     version = db.Column(db.String(5))
+    user_name = db.Column(db.String(25))
+    server_name = db.Column(db.String(10))
 
-
-    def __init__(self, operation_code, ip, device_code, version):
+    def __init__(self, operation_code, ip, device_code, version, user_name, server_name):
         super().__init__()
         self.operation_code = operation_code
         self.ip = ip
         self.device_code = device_code
         self.version = version
+        self.user_name = user_name
+        self.server_name = server_name
 
 
 class DeviceType(BaseDB):
