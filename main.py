@@ -21,7 +21,7 @@ def turnon():
     # вставку запускаем в отдельном потоке, чтобы не задерживать ответ
     thread = Thread(target=SaveHistory, args=(1, ip, serno, mac, device_name, ver))
     thread.start()
-    return {'UTC': dt.now(), 'next_update_min': 60}
+    return {'UTC': dt.now(), 'next_update_min': 180}
 
 
 @app.route("/update")
@@ -46,7 +46,7 @@ def login():
     # вставку запускаем в отдельном потоке, чтобы не задерживать ответ
     thread = Thread(target=SaveLogin, args=(3, ip, username, server_name, ver))
     thread.start()
-    return {'UTC': dt.now(), 'next_update_min': 180}
+    return {'UTC': dt.now()}
 
 
 def SaveHistory(operation_code, ip, serno, mac, device_name, ver):
