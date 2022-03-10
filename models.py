@@ -1,12 +1,14 @@
 from datetime import datetime as dt
 from main import db
 
+
 class BaseDB(db.Model):
     __abstract__ = True
 
     code = db.Column(db.Integer, primary_key=True)
     created_date = db.Column(db.Date)
     created_time = db.Column(db.Time)
+
     def __init__(self):
         self.created_time = dt.now().time()
         self.created_date = dt.now().date()
@@ -61,6 +63,7 @@ class DeviceType(BaseDB):
     def __init__(self, description):
         super().__init__()
         self.description = description
+
 
 class DeviceMode(BaseDB):
     __tablename__ = 'devicemode'
