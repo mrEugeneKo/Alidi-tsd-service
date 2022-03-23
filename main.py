@@ -53,9 +53,9 @@ def SaveHistory(operation_code, ip, serno, mac, device_name, ver):
     if ver != 'x':
         history_rec = models.HistoryRecord(
             operation_code
-            , ip
+            , ip[:16]
             , 0
-            , ver
+            , ver[:5]
             , ''
             , ''
         )
@@ -85,15 +85,15 @@ def SaveHistory(operation_code, ip, serno, mac, device_name, ver):
     return
 
 
-def SaveLogin(operation_code, ip, username, server_name, ver):
+def SaveLogin(operation_code, ip, username : str, server_name, ver):
     if ver != 'x':
         history_rec = models.HistoryRecord(
             operation_code
-            , ip
+            , ip[:16]
             , 0
-            , ver
-            , username
-            , server_name
+            , ver[:5]
+            , username[:25]
+            , server_name[:10]
         )
         lasthistory = db.session.query(models.HistoryRecord)\
             .filter_by(ip=ip) \
