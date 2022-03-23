@@ -60,10 +60,12 @@ def SaveHistory(operation_code, ip, serno, mac, device_name, ver):
             , ''
         )
         device = db.session.query(models.Device).filter_by(mac=mac).first()
+        db.session.remove()
         if device:
             history_rec.device_code = device.code
         else:
             devicetype = db.session.query(models.DeviceType).filter_by(description=device_name).first()
+            db.session.remove()
             newdevice = models.Device(
                 mac,
                 serno,
@@ -99,6 +101,7 @@ def SaveLogin(operation_code, ip, username, server_name, ver):
             .filter_by(ip=ip) \
             .order_by(models.HistoryRecord.created_date.desc()) \
             .first()
+        db.session.remove()
         if lasthistory:
             history_rec.device_code = lasthistory.device_code
         db.session.add(history_rec)
