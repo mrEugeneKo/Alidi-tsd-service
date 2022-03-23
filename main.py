@@ -8,10 +8,7 @@ from datetime import datetime as dt
 app = Flask(__name__)
 app.config.from_object(os.environ.get('ALIDI_TSD_SERVICE_MODE', 'config.DevelopmentConfig'))
 
-db = SQLAlchemy(app,
-                session_options={
-                    'pool_size': 30
-                })
+db = SQLAlchemy(app)
 
 
 @app.route("/turnon")
