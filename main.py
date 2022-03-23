@@ -97,7 +97,8 @@ def SaveLogin(operation_code, ip, username, server_name, ver):
         )
         lasthistory = db.session.query(models.HistoryRecord)\
             .filter_by(ip=ip) \
-            .order_by(models.HistoryRecord.created_date.desc()) \
+            .order_by(models.HistoryRecord.created_date.desc(),
+                      models.HistoryRecord.created_time.desc()) \
             .first()
         if lasthistory:
             history_rec.device_code = lasthistory.device_code
