@@ -110,14 +110,9 @@ def SaveLogin(operation_code, ip, username : str, server_name, ver):
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
     if app.config.get('DEBUG'):
-        # в режиме отладки работаем только по https
+        # в режиме отладки работаем только по http
         app.run(host='0.0.0.0', port=8080)
     else:
-        if os.environ.get('ALIDI_TSD_PROTOCOL', 'http') == 'http':
-            # если в настройках http - работаем по http
-            from waitress import serve
-            serve(app, host='0.0.0.0', port=8080)
-        else:
-            # если в настройках https - работаем по https
-            context = ('alidi/alidi_ru_2022_05_12.crt', 'alidi/alidi_ru_2022_05_12.txt')
-            app.run(host='0.0.0.0', port=8080, ssl_context=context)
+        from waitress import serve
+        serve(app, host='0.0.0.0', port=8080)
+
