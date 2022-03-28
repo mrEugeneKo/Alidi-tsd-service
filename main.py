@@ -40,7 +40,10 @@ def update():
 @app.route("/login")
 def login():
     username = request.args.get('username', default='x', type=str)
-    ip = request.remote_addr
+    if 'X-Real-IP' in request.headers:
+        ip = request.headers["X-Real-IP"]
+    else:
+        ip = request.remote_addr
     server_name = request.args.get('server_name', default='x', type=str)
     ver = request.args.get('ver', default='x', type=str)
     # вставку запускаем в отдельном потоке, чтобы не задерживать ответ
